@@ -36,5 +36,5 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
-deploy.sh
+src/config.js
 src.tar.gz
