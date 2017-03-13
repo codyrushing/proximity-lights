@@ -1,3 +1,4 @@
+'use strict';
 const EventEmitter = require('events');
 const request = require('request');
 const config = require('./config');
@@ -5,15 +6,24 @@ const config = require('./config');
 const { bridgeHost, bridgeUser} = config;
 
 class LightChannel extends EventEmitter {
-  constructor({lightId}){
-    this.lightId = lightId;
-    this.init();
+  constructor(params){
+    super();
+    this.init(params);
   }
-  init(){
+  init({lightId}){
     // bind events
-    this.on('update', this.update())
+    this.lightId = lightId;
+    this.on('enter', this.on_enter);
+    this.on('exit', this.on_exit);
+    this.on('update', this.on_update);
   }
-  update(){
+  on_enter(){
+    console.log('enter');
+  }
+  on_exit(){
+    console.log('exit');
+  }
+  on_update(){
     request({
       method: 'PUT',
       url: `http://${bridgeHost}/api/${bridgeUser}/lights/${this.lightId}/state`,
@@ -25,3 +35,5 @@ class LightChannel extends EventEmitter {
 
   }
 }
+
+module.exports = LightChannel;

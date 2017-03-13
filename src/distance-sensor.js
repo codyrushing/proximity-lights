@@ -1,4 +1,5 @@
 const d3Array = require('d3-array');
+const LightChannel = require('./light-channel');
 /*
 http://192.168.1.240/debug/clip.html (IP of bridge)
 Hue System API:
@@ -16,6 +17,7 @@ class DistanceSensor {
   }
 
   init(){
+    this.still = true;
     this.vals = [];
     this.initLightChannel(this.lightId);
 
@@ -53,16 +55,29 @@ class DistanceSensor {
     // is moving
     // enter
     // exit
-    const movementThreshold = 30;
-    const twoSampleAvg = d3Array.mean(this.vals.slice(0,2));
-    const priorTwoSampleAvg = d3Array.mean(this.vals.slice(2,4));
-    const velocity = (twoSampleAvg - priorTwoSample)/0.2;
+    const movementThreshold = 90;
+    const latestDistance = d3Array.mean(this.vals.slice(0,2));
+    const prevDistance = d3Array.mean(this.vals.slice(2,4));
+
+    // calculate velocity in inches per second
+    const velocity = (latestDistance - prevDistance)/0.2;
     if(velocity > movementThreshold){
       // exit
+      // console.log(`velocity = ${velocity}`);
       this.triggerEvent('exit');
     } else if(velocity < movementThreshold*-1) {
       // enter
+      // console.log(`velocity = ${velocity}`);
       this.triggerEvent('enter');
+    }
+
+    // movement needs to be more sensitive that stillness, listens to last 4 readings
+    if(d3Array.deviation(this.vals.slice(0,4)) >= 1 && this.still) {
+      console.log('movement');
+      this.still = false;
+    } else if(!this.still && d3Array.deviation(this.vals.slice(0,10)) < 0.5){
+      console.log('stillness');
+      this.still = true;
     }
 
   }
