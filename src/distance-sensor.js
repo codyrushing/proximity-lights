@@ -22,7 +22,7 @@ class DistanceSensor {
   init(){
     this.setInitialState();
     this.vals = [];
-    this.initLightChannel(this.lightId);
+    // this.initLightChannel(this.lightId);
 
     this.port = new SerialPort(this.serialPath,{
       // this sensor prepends 'R' before each value
@@ -50,7 +50,7 @@ class DistanceSensor {
     if(!isNaN(distance)){
       // save up to 100 values, which corresponds to 10 secs of data
       this.vals = [distance].concat(this.vals).slice(0,100);
-      setTimeout(this.update.bind(this),0);
+      this.update();
     }
     // console.log(distance);
   }
@@ -64,15 +64,15 @@ class DistanceSensor {
 
   on_enter(){
     if(this.isEmpty){
-      this.triggerEvent('enter');
       this.isEmpty = false;
+      this.triggerEvent('enter');
     }
   }
 
   on_exit(){
     if(!this.isEmpty){
-      this.triggerEvent('exit');
       this.isEmpty = true;
+      this.triggerEvent('exit');
     }
   }
 
@@ -84,7 +84,7 @@ class DistanceSensor {
 
   on_stillness(){
     this.isMoving = false;
-    this.triggerEvent('stillness')
+    this.triggerEvent('stillness');
   }
 
   update(){
