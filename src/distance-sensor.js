@@ -8,8 +8,8 @@ https://developers.meethue.com/documentation/core-concepts
 
 const range = [6, 254];
 const sampleSize = 2;
-const sampleRate = 0.1;
-const movementThreshold = 90; // inches per second
+const sampleRate = 0.05;
+const movementThreshold = 300; // inches per second
 
 const SerialPort = require('serialport');
 class DistanceSensor {
@@ -37,6 +37,7 @@ class DistanceSensor {
   setInitialState(){
     this.isMoving = false;
     this.isEmpty = true;
+    this.exitTime = Date.now();
   }
 
   initLightChannel(lightId){
@@ -72,12 +73,12 @@ class DistanceSensor {
   on_exit(){
     if(!this.isEmpty){
       this.isEmpty = true;
+      this.exitTime = Date.now();
       this.triggerEvent('exit');
     }
   }
 
   on_movement(movementFactor){
-    this.isEmpty = false;
     this.isMoving = true;
     this.triggerEvent('movement', movementFactor);
   }
@@ -88,12 +89,15 @@ class DistanceSensor {
   }
 
   update(){
+    const now = Date.now();
     const latestDistance = d3Array.mean(this.vals.slice(0,sampleSize));
     const prevDistance = d3Array.mean(this.vals.slice(sampleSize,sampleSize*2));
     // calculate velocity in inches per second
     const velocity = (latestDistance - prevDistance)/(sampleSize * sampleRate);
     // calculate movementFactor from variance
-    const movementFactor = d3Array.variance(this.vals.slice(0,sampleSize*2))
+    const shortTermMovementFactor = d3Array.variance(this.vals.slice(0,sampleSize*2));
+    const longTermMovementFactor = d3Array.variance(this.vals.slice(0,sampleSize*5));
+
     /*
     if empty
       listen for enter event
@@ -107,12 +111,17 @@ class DistanceSensor {
       if(velocity < -movementThreshold){
         this.on_enter();
       }
+      // long term movement factor
+      if(now - this.exitTime > 1000 && longTermMovementFactor >= 5 && longTermMovementFactor < 200){
+        this.on_enter();
+        this.on_movement();
+      }
     } else {
       if(velocity > movementThreshold){
         this.on_exit();
-      } else if(this.isMoving && d3Array.variance(this.vals.slice(0,sampleSize*5)) < 0.2){
+      } else if(this.isMoving && shortTermMovementFactor < 0.3){
         this.on_stillness();
-      } else if(movementFactor >= 1){
+      } else if(shortTermMovementFactor >= 5){
         this.on_movement();
       }
     }
