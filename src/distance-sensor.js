@@ -35,6 +35,7 @@ class DistanceSensor {
   }
 
   setInitialState(){
+    this.occupantsCount = 0;
     this.isMoving = false;
     this.isEmpty = true;
     this.exitTime = Date.now();
@@ -57,25 +58,24 @@ class DistanceSensor {
   }
 
   triggerEvent(event, data){
-    console.log(event);
+    console.log(`${event} ${data || ''}`);
+    // console.log(this.occupantsCount);
     if(this.lightChannel){
       this.lightChannel.emit(event, data);
     }
   }
 
   on_enter(){
-    if(this.isEmpty){
-      this.isEmpty = false;
-      this.triggerEvent('enter');
-    }
+    this.occupantsCount += 1;
+    this.isEmpty = false;
+    this.triggerEvent('enter');
   }
 
   on_exit(){
-    if(!this.isEmpty){
-      this.isEmpty = true;
-      this.exitTime = Date.now();
-      this.triggerEvent('exit');
-    }
+    this.occupantsCount -= 1;
+    this.isEmpty = true;
+    this.exitTime = Date.now();
+    this.triggerEvent('exit');
   }
 
   on_movement(movementFactor){
@@ -95,8 +95,8 @@ class DistanceSensor {
     // calculate velocity in inches per second
     const velocity = (latestDistance - prevDistance)/(sampleSize * sampleRate);
     // calculate movementFactor from variance
-    const shortTermMovementFactor = d3Array.variance(this.vals.slice(0,sampleSize*2));
-    const longTermMovementFactor = d3Array.variance(this.vals.slice(0,sampleSize*5));
+    const shortTermMovementFactor = Math.log(d3Array.variance(this.vals.slice(0,sampleSize*2)) + 1);
+    const longTermMovementFactor = Math.log(d3Array.variance(this.vals.slice(0,sampleSize*4)) + 1);
 
     /*
     if empty
@@ -107,22 +107,24 @@ class DistanceSensor {
       listen for stillness
     */
 
+    // console.log(shortTermMovementFactor);
+
     if(this.isEmpty){
       if(velocity < -movementThreshold){
         this.on_enter();
       }
       // long term movement factor
-      if(now - this.exitTime > 1000 && longTermMovementFactor >= 5 && longTermMovementFactor < 200){
+      if(now - this.exitTime > 1000 && longTermMovementFactor >= 1 && longTermMovementFactor < 200){
         this.on_enter();
-        this.on_movement();
+        this.on_movement(shortTermMovementFactor);
       }
     } else {
       if(velocity > movementThreshold){
         this.on_exit();
-      } else if(this.isMoving && shortTermMovementFactor < 0.3){
+      } else if(this.isMoving && shortTermMovementFactor < 0.2){
         this.on_stillness();
-      } else if(shortTermMovementFactor >= 5){
-        this.on_movement();
+      } else if(shortTermMovementFactor >= 1){
+        this.on_movement(shortTermMovementFactor);
       }
     }
 
