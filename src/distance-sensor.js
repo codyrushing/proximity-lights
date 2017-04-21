@@ -1,5 +1,6 @@
 const d3Array = require('d3-array');
 const LightChannel = require('./light-channel');
+const utils = require('./utils');
 /*
 http://192.168.1.240/debug/clip.html (IP of bridge)
 Hue System API:
@@ -58,7 +59,7 @@ class DistanceSensor {
   }
 
   triggerEvent(event, data){
-    console.log(`${event} ${data || ''}`);
+    // console.log(`${event} ${data || ''}`);
     // console.log(this.occupantsCount);
     if(this.lightChannel){
       this.lightChannel.emit(event, data);
@@ -88,6 +89,15 @@ class DistanceSensor {
     this.triggerEvent('stillness');
   }
 
+  getMovementFactor(vals){
+    // remove obvious outliers, if it is far outside the mean, then throw it out
+    const mean = d3Array.mean(vals);
+    vals = vals.filter(v => Math.abs(v - mean) < vals.length * 5);
+    if(!vals.length) return 0;
+    return utils.MAD(vals);
+    // return Math.log(d3Array.variance(vals) + 1);
+  }
+
   update(){
     const now = Date.now();
     const latestDistance = d3Array.mean(this.vals.slice(0,sampleSize));
@@ -97,6 +107,9 @@ class DistanceSensor {
     // calculate movementFactor from variance
     const shortTermMovementFactor = Math.log(d3Array.variance(this.vals.slice(0,sampleSize*2)) + 1);
     const longTermMovementFactor = Math.log(d3Array.variance(this.vals.slice(0,sampleSize*4)) + 1);
+
+    // console.log(latestDistance);
+    console.log(this.getMovementFactor(this.vals.slice(0, 4)));
 
     /*
     if empty
