@@ -1,6 +1,7 @@
+'use strict';
 const d3Array = require('d3-array');
-const LightChannel = require('./light-channel');
 const utils = require('./utils');
+
 /*
 http://192.168.1.240/debug/clip.html (IP of bridge)
 Hue System API:
@@ -14,16 +15,15 @@ const movementThreshold = 300; // inches per second
 
 const SerialPort = require('serialport');
 class DistanceSensor {
-  constructor({serialPath, lightId}){
+  constructor({serialPath}){
     this.serialPath = serialPath;
-    this.lightId = lightId;
     this.init();
   }
 
   getState(){
     var state = {};
     ['distance', 'velocity', 'occupantsCount', 'isMoving', 'isEmpty', 'movementLong', 'movementShort'].forEach(prop => {
-      state[prop] = this[prop]
+      state[prop] = this[prop];
     });
     return state;
   }
@@ -31,7 +31,6 @@ class DistanceSensor {
   init(){
     this.setInitialState();
     this.vals = [];
-    // this.initLightChannel(this.lightId);
 
     this.port = new SerialPort(this.serialPath,{
       // this sensor prepends 'R' before each value
@@ -54,12 +53,6 @@ class DistanceSensor {
     this.exitTime = Date.now();
   }
 
-  initLightChannel(lightId){
-    this.lightChannel = new LightChannel({
-      lightId: lightId
-    });
-  }
-
   on_data(data){
     const distance = parseInt(data, 10);
     if(!isNaN(distance)){
@@ -71,19 +64,16 @@ class DistanceSensor {
   }
 
   send(){
-    if(this.lightChannel){
-      this.lightChannel.emit('state', this.getState());
-    } else {
-      console.error('No lightChannel found');
-    }
+    const nextState = this.getState();
+    this.emit('state', {
+      nextState,
+      prevState: this.state
+    });
+    this.state = nextState
   }
 
   triggerEvent(event, data){
-    // console.log(`${event} ${data || ''}`);
-    // console.log(this.occupantsCount);
-    if(this.lightChannel){
-      this.lightChannel.emit(event, data);
-    }
+    this.emit(event, data);
   }
 
   on_enter(){

@@ -1,39 +1,43 @@
 'use strict';
-const EventEmitter = require('events');
 const request = require('request');
 const config = require('./config');
-
+const { throttle } = require('lodash');
 const { bridgeHost, bridgeUser} = config;
+const API_ROOT = `http://${bridgeHost}/api/${bridgeUser}`;
 
-class LightChannel extends EventEmitter {
-  constructor(params){
-    super();
-    this.init(params);
-  }
-  init({lightId}){
-    // bind events
-    this.lightId = lightId;
-    this.on('enter', this.on_enter);
-    this.on('exit', this.on_exit);
-    this.on('update', this.on_update);
-  }
-  on_enter(){
-    console.log('enter');
-  }
-  on_exit(){
-    console.log('exit');
-  }
-  on_update(){
-    request({
-      method: 'PUT',
-      url: `http://${bridgeHost}/api/${bridgeUser}/lights/${this.lightId}/state`,
-      json: true,
-      body: {
-        transitiontime: 0
+const lightChannel = {
+  blocked: {},
+  update: throttle(
+    function(lightId, data){
+      if(!this.blocked[lightId]){
+        request({
+          method: 'PUT',
+          url: `http://${bridgeHost}/api/${bridgeUser}/lights/${lightId}/state`,
+          json: true,
+          body: Object.assign({
+            transitiontime: 0
+          }, data)
+        }, (err, response, body) => {
+          if(err){
+            console.error(err);
+          }
+        });
+        if(data.blockForTime){
+          this.blocked[lightId] = true;
+          setTimeout(
+            () => {
+              this.blocked[lightId] = false;
+            },
+            blockForTime
+          );
+        }
       }
-    });
-
-  }
+    },
+    100,
+    {
+      leading: true
+    }
+  )
 }
 
-module.exports = LightChannel;
+module.exports = lightChannel;

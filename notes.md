@@ -5,6 +5,6 @@
 
 ### Philips Hue API notes
 * There's a convoluted `xy` option, but it will likely be easier to use `hue`, `sat`, and `bri`.
-* `ct` is color temperature, so warm and cold whites.  Maybe good for a non color-heavy recipe.
-* `"effect": "colorloop"` cycles through all colors.  `"alert": "select"` blinks the last color.
+* `ct` is color temperature, so warm and cold whites.  Only useful for whites - will override `hue` and `sat`.
+* `"effect": "colorloop"` cycles through all colors (send `"effect": "none"` to stop).  `"alert": "select"` blinks the last color.
 * You can address all lights with `/groups/0`
