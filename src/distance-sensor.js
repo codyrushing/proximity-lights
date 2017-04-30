@@ -1,4 +1,5 @@
 'use strict';
+const EventEmitter = require('events');
 const d3Array = require('d3-array');
 const utils = require('./utils');
 
@@ -14,10 +15,11 @@ const sampleRate = 0.05;
 const movementThreshold = 300; // inches per second
 
 const SerialPort = require('serialport');
-class DistanceSensor {
+class DistanceSensor extends EventEmitter {
   constructor({serialPath}){
-    this.serialPath = serialPath;
-    this.init();
+    super();
+    this.init(serialPath);
+    return this;
   }
 
   getState(){
@@ -28,7 +30,8 @@ class DistanceSensor {
     return state;
   }
 
-  init(){
+  init(serialPath){
+    this.serialPath = serialPath;
     this.setInitialState();
     this.vals = [];
 
@@ -59,17 +62,18 @@ class DistanceSensor {
       // save up to 100 values, which corresponds to 10 secs of data
       this.vals = [distance].concat(this.vals).slice(0,100);
       this.update();
-      process.nextTick(this.send);
+      process.nextTick(this.send.bind(this));
     }
   }
 
   send(){
     const nextState = this.getState();
+    console.log('emitting state');
     this.emit('state', {
       nextState,
       prevState: this.state
     });
-    this.state = nextState
+    this.state = nextState;
   }
 
   triggerEvent(event, data){

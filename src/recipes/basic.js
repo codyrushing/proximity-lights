@@ -5,12 +5,17 @@ class BasicRecipe {
   constructor(sensor, lightId){
     this.sensor = sensor;
     this.lightId = lightId;
+    this.init();
   }
   processState(state){
+    // map sensor state to light properties
+    return {
 
+    };
   }
   init(){
     this.sensor.on('state', ({state, prevState}) => {
+      console.log('state received in recipe');
       if(
         !isEqual(state, prevState)
       ){
