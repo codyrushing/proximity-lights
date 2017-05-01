@@ -1,5 +1,5 @@
 const DistanceSensor = require('./distance-sensor');
-const BasicRecipe = require('./recipes/basic');
+const InverseProximityRoutine = require('./routines/inverse-proximity');
 const config = require('./config');
 const recipes = {};
 
@@ -8,7 +8,7 @@ const distanceSensors = config.sensors.map(
   sensorData => {
     const lightId = sensorData.lightId;
     const sensor = new DistanceSensor(sensorData);
-    recipes[lightId] = new BasicRecipe(sensor, lightId);
+    recipes[lightId] = new InverseProximityRoutine(sensor, lightId);
     return sensor;
   }
 );
