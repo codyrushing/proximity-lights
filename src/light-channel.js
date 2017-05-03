@@ -12,7 +12,7 @@ const lightChannel = {
       if(!this.blocked[lightId]){
         request({
           method: 'PUT',
-          url: `http://${bridgeHost}/api/${bridgeUser}/lights/${lightId}/state`,
+          url: `${API_ROOT}/lights/${lightId}/state`,
           json: true,
           body: Object.assign({
             transitiontime: 0

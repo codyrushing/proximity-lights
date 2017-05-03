@@ -1,7 +1,9 @@
 'use strict';
 const EventEmitter = require('events');
 const d3Array = require('d3-array');
+const d3Scale = require('d3-scale');
 const utils = require('./utils');
+const config = require('./constants');
 
 /*
 http://192.168.1.240/debug/clip.html (IP of bridge)
@@ -11,8 +13,12 @@ https://developers.meethue.com/documentation/core-concepts
 
 const range = [6, 254];
 const sampleSize = 10;
-const sampleRate = 0.05;
-const movementThreshold = 300; // inches per second
+const rawValuesLength = 40;
+var cycle = 0;
+var rawBatch = [];
+var exitThresholdScale = d3Scale.scaleLinear();
+exitThresholdScale.domain([6, config.MAX_USABLE_DISTANCE]);
+exitThresholdScale.range([4, rawValuesLength]);
 
 const SerialPort = require('serialport');
 class DistanceSensor extends EventEmitter {
@@ -34,6 +40,15 @@ class DistanceSensor extends EventEmitter {
     this.serialPath = serialPath;
     this.setInitialState();
     this.vals = [];
+    this.vals.length = rawValuesLength;
+    this.vals.fill(config.MAX_USABLE_DISTANCE);
+    this.rawVals = [];
+    this.rawVals.length = rawValuesLength;
+    this.rawVals.fill(255);
+    this.velocityVals = [];
+    this.velocityVals.length = 10;
+    this.velocityVals.fill(0);
+    this.update();
 
     this.port = new SerialPort(this.serialPath,{
       // this sensor prepends 'R' before each value
@@ -46,9 +61,7 @@ class DistanceSensor extends EventEmitter {
   }
 
   setInitialState(){
-    this.missedTargetCount = 0;
-    this.hasNoisyData = false;
-    this.isMissingTarget = false;
+    this.hasTarget = false;
     this.velocity = 0;
     this.distance = 255;
     this.occupantsCount = 0;
@@ -57,85 +70,54 @@ class DistanceSensor extends EventEmitter {
     this.movementShort = 0;
     this.movementLong = 0;
     this.exitTime = Date.now();
+    this.sampleTime = Date.now();
+  }
+
+  filterBadValues(arr){
+    const mean = d3Array.mean(arr);
+    if(mean > 180){
+      // likely empty, filter non 255s which are noise
+      return arr.filter(v => v > 250).map(v => config.MAX_USABLE_DISTANCE);
+    } else {
+      // likely not empty, so try to filter out 255s by removing anything above Q3
+      let min = d3Array.min(arr);
+      return arr.filter(v => v <= min + (mean-min)*1.5);
+    }
+    // return utils.filterOutliers(arr).map(v => v > config.MAX_USABLE_DISTANCE ? config.MAX_USABLE_DISTANCE : v);
   }
 
   on_data(data){
     const distance = parseInt(data, 10);
+    var addGoodValue = v => {
+      this.vals = [v].concat(this.vals).slice(0,200);
+      this.update();
+      process.nextTick(this.send.bind(this));
+    }
     if(!isNaN(distance)){
       // save up to 100 values, which corresponds to 10 secs of data
-      this.vals = [distance].concat(this.vals).slice(0,100);
-      this.filterNoise();
-      this.filterMisses();
-      if(!this.hasNoisyData && !this.isMissingTarget){
-        this.update();
-        process.nextTick(this.send.bind(this));
-      }
-    }
-  }
-
-  filterNoise(){
-    const noisyDifferential = 20;
-    const recentAvgDistance = d3Array.mean(this.vals.slice(1,5));
-    // if previous value is possibly noisy, then measure it agains latest value to determine if it needs to be removed or not
-    // if our most recent data point deviates largely from the previous 4, it could be a noisy value
-    if(
-      !this.hasNoisyData
-      &&
-      Math.abs(this.vals[0] - recentAvgDistance) > noisyDifferential
-    ){
-      this.hasNoisyData = true;
-    }
-    else if (this.hasNoisyData) {
-      if(
-        Math.abs(this.vals[1] - this.vals[0]) > 5
-      ) {
-        // remove previous value since it appears it was out of line with following value and the preceding 4 values
-        this.vals.splice(1,1);
-        this.missedTargetCount = 0;
-      }
-      this.hasNoisyData = false;
-    }
-  }
-
-  filterMisses(){
-    const maxNumOfMisses = 10;
-    if(d3Array.mean(this.vals.slice(0,10)) > 200){
-      this.isMissingTarget = true;
-    }
-    else if(
-      this.vals[0] > 250
-    ) {
-      this.missedTargetCount += 1;
-      if(
-        this.missedTargetCount > maxNumOfMisses
-      ){
-        // reinsert 255s
-        this.isMissingTarget = false;
-        let empties = [];
-        empties.length = maxNumOfMisses;
-        // this.vals = empties.fill(255).concat(this.vals);
-        this.missedTargetCount = 0;
+      this.rawVals = [distance].concat(this.rawVals).slice(0,rawValuesLength);
+      const exitThreshold = Math.round(exitThresholdScale(d3Array.mean(this.vals.slice(0,4))));
+      if(this.hasTarget){
+        // if the last X num of readings (based on distance) are misses, then we're empty
+        if(!this.rawVals.slice(0, exitThreshold).find(v => v < 255)){
+          this.hasTarget = false;
+          addGoodValue(config.MAX_USABLE_DISTANCE);
+        } else if(distance < 250 && Math.abs(distance - d3Array.mean(this.rawVals.filter(v => v < 250).slice(0,3))) < 10) {
+          addGoodValue(Math.min(config.MAX_USABLE_DISTANCE, distance));
+        }
       } else {
-        // remove 255s from vals as they will mess up downstream calculations
-        this.isMissingTarget = true;
-        this.vals.splice(0,1);
+        // if the last four are all legit, then something is there
+        if( !this.rawVals.slice(0,4).find(v => v > 250) ) {
+          // there's something there
+          addGoodValue(distance);
+          this.hasTarget = true;
+        }
       }
     }
-    else {
-      this.isMissingTarget = false;
-      this.missedTargetCount = 0;
-    }
-
   }
 
   send(){
-    const nextState = this.getState();
-    // console.log('emitting state');
-    this.emit('state', {
-      nextState,
-      prevState: this.state
-    });
-    this.state = nextState;
+    this.emit('state', this.getState());
   }
 
   triggerEvent(event, data){
@@ -176,15 +158,20 @@ class DistanceSensor extends EventEmitter {
 
   update(){
     const now = Date.now();
-    const prevDistance = d3Array.mean(this.vals.slice(sampleSize,sampleSize*2));
-    // calculate velocity in inches per second
-    this.distance = d3Array.mean(this.vals.slice(0,sampleSize));
-    this.velocity = (this.distance - prevDistance)/(sampleSize * sampleRate);
+    this.distance = this.vals[0];
+    // below than 10 is noise, 10 - 50 is the real movement range
+    this.velocity = this.vals.slice(0, sampleSize*2).find(v => v === config.MAX_USABLE_DISTANCE) ?
+      0 :
+      Math.round(
+        (d3Array.mean(this.vals.slice(0, sampleSize)) - d3Array.mean(this.vals.slice(sampleSize,sampleSize*2)))
+        /(now - this.sampleTime)
+        /sampleSize*1000
+      );
+    this.velocity = isNaN(this.velocity) ? 0 : this.velocity;
+    // this.velocityVals = [isNaN(velocity) ? 0 : velocity].concat(this.velocityVals).slice(0,10);
     // calculate movementFactor from variance
-    this.movementShort = this.getMovementFactor(this.vals.slice(0,sampleSize*2));
-    this.movementLong = this.getMovementFactor(this.vals.slice(0,sampleSize*4));
-
-    console.log(`${now} ${this.distance}`);
+    this.movementShort = this.getMovementFactor(this.vals.slice(0,sampleSize));
+    this.movementLong = this.getMovementFactor(this.vals.slice(0,sampleSize*2));
 
     /*
     if empty
@@ -196,24 +183,21 @@ class DistanceSensor extends EventEmitter {
     */
 
     if(this.isEmpty){
-      if(this.velocity < -movementThreshold){
+      if(this.distance < config.MAX_USABLE_DISTANCE){
         this.on_enter();
       }
       // long term movement factor
-      // TODO - adjust these constants to reflect new movement algorithm
-      if(now - this.exitTime > 1000 && this.movementLong >= 1 && this.movementLong < 200){
-        this.on_enter();
-        this.on_movement(this.movementShort);
-      }
     } else {
-      if(this.velocity > movementThreshold){
+      if(this.distance === config.MAX_USABLE_DISTANCE){
         this.on_exit();
-      } else if(this.isMoving && this.movementShort < 0.2){
+      } else if(this.isMoving && this.movementShort < 1){
         this.on_stillness();
-      } else if(this.movementShort >= 1){
+      } else if(this.movementShort >= 1.5){
         this.on_movement(this.movementShort);
       }
     }
+
+    this.sampleTime = now;
 
   }
 

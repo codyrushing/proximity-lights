@@ -1,6 +1,10 @@
 const d3Array = require('d3-array');
 
 module.exports = {
+  filterOutliers: arr => {
+    const mean = d3Array.mean(arr);
+    return arr.filter(v => Math.abs(v - mean) < Math.max(mean/10, 20));
+  },
   IQR: arr => {
     arr = arr.sort((a,b) => a-b);
     if(arr.length%2){

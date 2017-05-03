@@ -1,0 +1,4 @@
+module.exports = {
+  MIN_USABLE_DISTANCE: 6,
+  MAX_USABLE_DISTANCE: 150
+};

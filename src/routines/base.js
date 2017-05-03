@@ -9,10 +9,12 @@ class BaseRoutine {
   // override this
   processSensorState(sensorState){
     // map sensor state to light properties
-    return {};
+    return {
+      
+    };
   }
   // override this
-  on_sensorState(sensorState, prevSensorState){
+  on_sensorState(sensorState){
     lightChannel.update(this.lightId, this.processSensorState(sensorState));
   }
   on_exit(){
@@ -21,10 +23,18 @@ class BaseRoutine {
   on_enter(){
 
   }
+  on_movement(){
+
+  }
+  on_stillness(){
+
+  }
   init(){
-    this.sensor.on('state', (sensorState, prevSensorState) => this.on_sensorState(sensorState, prevSensorState));
+    this.sensor.on('state', (sensorState) => this.on_sensorState(sensorState));
     this.sensor.on('exit', () => this.on_exit());
     this.sensor.on('enter', () => this.on_enter());
+    this.sensor.on('movement', () => this.on_movement());
+    this.sensor.on('stillness', () => this.on_stillness());
   }
   destroy(){
     this.sensor.removeAllListeners('state');
