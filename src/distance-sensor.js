@@ -49,6 +49,7 @@ class DistanceSensor extends EventEmitter {
     this.velocityVals.length = 10;
     this.velocityVals.fill(0);
     this.update();
+    this.send();
 
     this.port = new SerialPort(this.serialPath,{
       // this sensor prepends 'R' before each value
@@ -56,7 +57,9 @@ class DistanceSensor extends EventEmitter {
     });
 
     this.port
-      .on('open', () => console.log(`${this.serialPath} channel opened`))
+      .on('open', () => {
+        console.log(`${this.serialPath} channel opened`);
+      })
       .on('data', data => this.on_data(data));
   }
 
@@ -107,6 +110,7 @@ class DistanceSensor extends EventEmitter {
         }
       } else {
         // if the last four are all legit, then something is there
+        // TODO, make the # of legit values higher for further distances
         if( !this.rawVals.slice(0,4).find(v => v > 250) ) {
           // there's something there
           addGoodValue(distance);
@@ -139,7 +143,7 @@ class DistanceSensor extends EventEmitter {
 
   on_movement(movementFactor){
     this.isMoving = true;
-    this.triggerEvent('move', movementFactor);
+    this.triggerEvent('movement', movementFactor);
   }
 
   on_stillness(){
@@ -170,7 +174,7 @@ class DistanceSensor extends EventEmitter {
     this.velocity = isNaN(this.velocity) ? 0 : this.velocity;
     // this.velocityVals = [isNaN(velocity) ? 0 : velocity].concat(this.velocityVals).slice(0,10);
     // calculate movementFactor from variance
-    this.movementShort = this.getMovementFactor(this.vals.slice(0,sampleSize));
+    this.movementShort = this.getMovementFactor(this.vals.slice(0,Math.round(sampleSize/2)));
     this.movementLong = this.getMovementFactor(this.vals.slice(0,sampleSize*2));
 
     /*

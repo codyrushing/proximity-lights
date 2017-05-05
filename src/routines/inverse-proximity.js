@@ -4,29 +4,83 @@ const lightChannel = require('../light-channel');
 const BaseRoutine = require('./base');
 const config = require('../constants');
 
-var briScale = d3Scale.scaleLinear();
-briScale.domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE]);
-briScale.range([1, 255]);
+const briScale = d3Scale.scaleLinear()
+  .clamp(true)
+  .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
+  // .range([1, 255]);
+  .range([1, 255]);
 
-var ctScale = d3Scale.scaleLinear();
-ctScale.domain([0, 50]);
-ctScale.range([153, 500]);
+const mvmtShortScale = d3Scale.scaleLinear()
+  .clamp(true)
+  .domain([2, 12])
+  .range([0, 100]);
+
+const mvmtLongScale = d3Scale.scaleLinear()
+  .clamp(true)
+  .domain([1, 10])
+  .range([0, 1]);
+
+const ctScale = d3Scale.scaleLinear()
+  .clamp(true)
+  .domain([15, 50])
+  // ctScale.range([153, 500]);
+  .range([250, 400]);
 
 class InverseProximityRoutine extends BaseRoutine {
-  processSensorState(state){
+  init(){
+    super.init();
+    this.blinkTimer = null;
+    this.i = 0;
+    this.colorPoints = [0, 5000, 40000, 50000];
+    this.on_exit();
+  }
+  colorCycle(){
+    lightChannel.update(this.lightId, {
+      hue: this.colorPoints[this.i],
+      unblock: true,
+      transitiontime: 20
+    });
+    this.i = this.i === 4 ? 0 : this.i+1;
+  }
+  processSensorData(data){
     // map sensor state to light properties
+    if(data.isEmpty){
+      return {
+        hue: 0,
+        bri: 1,
+        sat: 255,
+        transitiontime: 1
+      }
+    }
     return {
-      bri: state.isEmpty ? 1 : Math.round(briScale(state.distance)),
-      ct: Math.round(ctScale(state.movementShort)),
+      bri: data.isEmpty ? 1 : Math.round( briScale(data.distance) ),
+      ct: Math.round( ctScale(Math.abs(data.velocity)) ),
       transitiontime: 1
     };
   }
-  on_sensorState(nextSensorState){
+  on_exit(){
+    this.blinkTimer = setInterval(
+      this.colorCycle.bind(this),
+      2000
+    );
+  }
+  on_enter(){
+    if(this.blinkTimer){
+      clearInterval(this.blinkTimer);
+    }
+  }
+  on_movement(){
+
+  }
+  on_stillness(){
+
+  }
+  on_sensorState(nextSensorData){
     if(
-      !isEqual(this.sensorState || {}, nextSensorState)
+      !isEqual(this.sensorData || {}, nextSensorData)
     ){
-      this.sensorState = nextSensorState;
-      lightChannel.update(this.lightId, this.processSensorState(this.sensorState));
+      lightChannel.update(this.lightId, this.processSensorData(nextSensorData));
+      this.sensorData = nextSensorData;
     }
   }
 }

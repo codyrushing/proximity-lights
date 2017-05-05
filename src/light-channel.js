@@ -9,7 +9,10 @@ const lightChannel = {
   blocked: {},
   update: throttle(
     function(lightId, data){
-      if(!this.blocked[lightId]){
+      if(data.unblock){
+        this.blocked[lightId] = false;
+      }
+      if(!this.blocked[lightId] ){
         request({
           method: 'PUT',
           url: `${API_ROOT}/lights/${lightId}/state`,
@@ -22,6 +25,7 @@ const lightChannel = {
             console.error(err);
           }
         });
+        this.blocked[lightId] = !!data.block;
         if(data.blockForTime){
           this.blocked[lightId] = true;
           setTimeout(

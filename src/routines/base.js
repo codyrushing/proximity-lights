@@ -7,15 +7,15 @@ class BaseRoutine {
     this.init();
   }
   // override this
-  processSensorState(sensorState){
+  processSensorData(data){
     // map sensor state to light properties
     return {
-      
+
     };
   }
   // override this
-  on_sensorState(sensorState){
-    lightChannel.update(this.lightId, this.processSensorState(sensorState));
+  on_sensorData(sensorState){
+    lightChannel.update(this.lightId, this.processSensorData(data));
   }
   on_exit(){
 
@@ -30,6 +30,7 @@ class BaseRoutine {
 
   }
   init(){
+    this.state = {};
     this.sensor.on('state', (sensorState) => this.on_sensorState(sensorState));
     this.sensor.on('exit', () => this.on_exit());
     this.sensor.on('enter', () => this.on_enter());
