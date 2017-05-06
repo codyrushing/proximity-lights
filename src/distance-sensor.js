@@ -22,8 +22,9 @@ exitThresholdScale.range([4, rawValuesLength]);
 
 const SerialPort = require('serialport');
 class DistanceSensor extends EventEmitter {
-  constructor({serialPath}){
+  constructor({serialPath, lightId}){
     super();
+    this.lightId = lightId;
     this.init(serialPath);
     return this;
   }
@@ -59,6 +60,9 @@ class DistanceSensor extends EventEmitter {
     this.port
       .on('open', () => {
         console.log(`${this.serialPath} channel opened`);
+      })
+      .on('error', err => {
+        console.error(`Could not open serial port: ${err.message}`);
       })
       .on('data', data => this.on_data(data));
   }
