@@ -7,41 +7,44 @@ const API_ROOT = `http://${bridgeHost}/api/${bridgeUser}`;
 
 const lightChannel = {
   blocked: {},
-  update: throttle(
+  APICall: throttle(
     function(lightId, data){
-      if(data.unblock){
-        this.blocked[lightId] = false;
-      }
-      if(!this.blocked[lightId] ){
-        request({
-          method: 'PUT',
-          url: `${API_ROOT}/lights/${lightId}/state`,
-          json: true,
-          body: Object.assign({
-            transitiontime: 0
-          }, data)
-        }, (err, response, body) => {
-          if(err){
-            console.error(err);
-          }
-        });
-        this.blocked[lightId] = !!data.block;
-        if(data.blockForTime){
-          this.blocked[lightId] = true;
-          setTimeout(
-            () => {
-              this.blocked[lightId] = false;
-            },
-            blockForTime
-          );
+      request({
+        method: 'PUT',
+        url: `${API_ROOT}/lights/${lightId}/state`,
+        json: true,
+        body: Object.assign({
+          transitiontime: 0
+        }, data)
+      }, (err, response, body) => {
+        if(err){
+          console.error(err);
         }
-      }
+      });
     },
     100,
     {
       leading: true
     }
-  )
+  ),
+  update: function(lightId, data){
+    if(data.unblock){
+      this.blocked[lightId] = false;
+    }
+    if(!this.blocked[lightId]){
+      this.APICall(lightId, data);
+      this.blocked[lightId] = !!data.block;
+      if(data.blockForTime){
+        this.blocked[lightId] = true;
+        setTimeout(
+          () => {
+            this.blocked[lightId] = false;
+          },
+          blockForTime
+        );
+      }
+    }
+  }
 }
 
 module.exports = lightChannel;

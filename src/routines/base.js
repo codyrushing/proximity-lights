@@ -41,6 +41,8 @@ class BaseRoutine {
     this.sensor.removeAllListeners('state');
     this.sensor.removeAllListeners('exit');
     this.sensor.removeAllListeners('enter');
+    this.sensor.removeAllListeners('movement');
+    this.sensor.removeAllListeners('stillness');
   }
 }
 

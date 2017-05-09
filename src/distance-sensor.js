@@ -80,19 +80,6 @@ class DistanceSensor extends EventEmitter {
     this.sampleTime = Date.now();
   }
 
-  filterBadValues(arr){
-    const mean = d3Array.mean(arr);
-    if(mean > 180){
-      // likely empty, filter non 255s which are noise
-      return arr.filter(v => v > 250).map(v => config.MAX_USABLE_DISTANCE);
-    } else {
-      // likely not empty, so try to filter out 255s by removing anything above Q3
-      let min = d3Array.min(arr);
-      return arr.filter(v => v <= min + (mean-min)*1.5);
-    }
-    // return utils.filterOutliers(arr).map(v => v > config.MAX_USABLE_DISTANCE ? config.MAX_USABLE_DISTANCE : v);
-  }
-
   on_data(data){
     const distance = parseInt(data, 10);
     var addGoodValue = v => {
@@ -111,11 +98,13 @@ class DistanceSensor extends EventEmitter {
           addGoodValue(config.MAX_USABLE_DISTANCE);
         } else if(distance < 250 && Math.abs(distance - d3Array.mean(this.rawVals.filter(v => v < 250).slice(0,3))) < 10) {
           addGoodValue(Math.min(config.MAX_USABLE_DISTANCE, distance));
+        } else if(distance > 250) {
+          addGoodValue(this.vals[0]);
         }
       } else {
         // if the last four are all legit, then something is there
         // TODO, make the # of legit values higher for further distances
-        if( !this.rawVals.slice(0,4).find(v => v > 250) ) {
+        if( !this.rawVals.slice(0,5).find(v => v > 250) ) {
           // there's something there
           addGoodValue(distance);
           this.hasTarget = true;

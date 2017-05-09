@@ -1,39 +1,45 @@
 const http = require('http');
 const path = require('path');
 const DistanceSensor = require('./distance-sensor');
-const InverseProximityRoutine = require('./routines/inverse-proximity');
+const InverseProximityRoutine = require('./routines/inverse-distance');
 const config = require('./config');
 const routines = {};
 
 // initialize sensors and set up a recipe
 const distanceSensors = config.sensors.map(
-  sensorData => {
-    const lightId = sensorData.lightId;
-    const sensor = new DistanceSensor(sensorData);
-    return sensor;
-  }
+  sensorData => new DistanceSensor(sensorData)
 );
 
 const applyRoutine = (routineName) => {
   try {
     const Routine = require(`./routines/${routineName}`);
     distanceSensors.forEach(sensor => {
+      let routine = routines[sensor.lightId];
+      if(routine){
+        routine.destroy();
+      }
       routines[sensor.lightId] = new Routine(sensor, sensor.lightId);
-    })
+    });
   } catch(err) {
     console.error(`Error applying routine ${routineName}`, err.message);
   }
 }
 
-applyRoutine('inverse-proximity');
+applyRoutine('inverse-distance');
 
 const server = http.createServer(
   (req, res) => {
     console.log(req.url);
-    if(req.url.match(/^\/set-routine/)){
-      let routineName = path.basename(req.url);
+    try {
+      if(req.url.match(/^\/set-routine/)){
+        let routineName = path.basename(req.url);
+        applyRoutine(routineName);
+      }
+      res.end('OK');
+    } catch(err) {
+      console.error(err);
+      res.end('FAIL');
     }
-    res.end('OK');
   }
 );
 

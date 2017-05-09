@@ -26,13 +26,11 @@ const ctScale = d3Scale.scaleLinear()
   // ctScale.range([153, 500]);
   .range([250, 400]);
 
-class InverseProximityRoutine extends BaseRoutine {
+class InverseDistance extends BaseRoutine {
   init(){
     super.init();
-    this.blinkTimer = null;
     this.i = 0;
     this.colorPoints = [0, 5000, 40000, 50000];
-    this.on_exit();
   }
   colorCycle(){
     lightChannel.update(this.lightId, {
@@ -54,20 +52,9 @@ class InverseProximityRoutine extends BaseRoutine {
     }
     return {
       bri: data.isEmpty ? 1 : Math.round( briScale(data.distance) ),
-      ct: Math.round( ctScale(Math.abs(data.velocity)) ),
+      ct: 350,
       transitiontime: 1
     };
-  }
-  on_exit(){
-    this.blinkTimer = setInterval(
-      this.colorCycle.bind(this),
-      2000
-    );
-  }
-  on_enter(){
-    if(this.blinkTimer){
-      clearInterval(this.blinkTimer);
-    }
   }
   on_movement(){
 
@@ -85,4 +72,4 @@ class InverseProximityRoutine extends BaseRoutine {
   }
 }
 
-module.exports = InverseProximityRoutine;
+module.exports = InverseDistance;
