@@ -25,7 +25,7 @@ const applyRoutine = (routineName) => {
   }
 }
 
-applyRoutine('inverse-distance');
+applyRoutine('flicker-move');
 
 const server = http.createServer(
   (req, res) => {

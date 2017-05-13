@@ -12,15 +12,18 @@ https://developers.meethue.com/documentation/core-concepts
 */
 
 const range = [6, 254];
+const upperThreshold = config.MAX_USABLE_DISTANCE;
 const sampleSize = 10;
 const rawValuesLength = 40;
-var cycle = 0;
-var rawBatch = [];
 var exitThresholdScale = d3Scale.scaleLinear();
 exitThresholdScale.domain([6, config.MAX_USABLE_DISTANCE]);
-exitThresholdScale.range([4, rawValuesLength]);
+exitThresholdScale.range([4, 15]);
 
 const SerialPort = require('serialport');
+const rawValueIsAMiss = function(rawVal){
+  return rawVal > upperThreshold;
+};
+
 class DistanceSensor extends EventEmitter {
   constructor({serialPath, lightId}){
     super();
@@ -31,7 +34,8 @@ class DistanceSensor extends EventEmitter {
 
   getState(){
     var state = {};
-    ['distance', 'velocity', 'occupantsCount', 'isMoving', 'isEmpty', 'movementLong', 'movementShort'].forEach(prop => {
+    ['distance', 'velocity', 'occupantsCount', 'isMoving', 'isEmpty', 'movementLong', 'movementShort']
+    .forEach(prop => {
       state[prop] = this[prop];
     });
     return state;
@@ -45,12 +49,16 @@ class DistanceSensor extends EventEmitter {
     this.vals.fill(config.MAX_USABLE_DISTANCE);
     this.rawVals = [];
     this.rawVals.length = rawValuesLength;
-    this.rawVals.fill(255);
+    this.rawVals.fill(upperThreshold);
     this.velocityVals = [];
     this.velocityVals.length = 10;
     this.velocityVals.fill(0);
-    this.update();
-    this.send();
+    process.nextTick(
+      () => {
+        this.update();
+        this.send();
+      }
+    )
 
     this.port = new SerialPort(this.serialPath,{
       // this sensor prepends 'R' before each value
@@ -70,7 +78,7 @@ class DistanceSensor extends EventEmitter {
   setInitialState(){
     this.hasTarget = false;
     this.velocity = 0;
-    this.distance = 255;
+    this.distance = upperThreshold;
     this.occupantsCount = 0;
     this.isMoving = false;
     this.isEmpty = true;
@@ -82,10 +90,12 @@ class DistanceSensor extends EventEmitter {
 
   on_data(data){
     const distance = parseInt(data, 10);
-    var addGoodValue = v => {
+    var addGoodValue = (v, silent) => {
       this.vals = [v].concat(this.vals).slice(0,200);
-      this.update();
-      process.nextTick(this.send.bind(this));
+      if(!silent){
+        this.update();
+        process.nextTick(this.send.bind(this));
+      }
     }
     if(!isNaN(distance)){
       // save up to 100 values, which corresponds to 10 secs of data
@@ -93,20 +103,28 @@ class DistanceSensor extends EventEmitter {
       const exitThreshold = Math.round(exitThresholdScale(d3Array.mean(this.vals.slice(0,4))));
       if(this.hasTarget){
         // if the last X num of readings (based on distance) are misses, then we're empty
-        if(!this.rawVals.slice(0, exitThreshold).find(v => v < 255)){
+        if(!this.rawVals.slice(0, exitThreshold).find(v => !rawValueIsAMiss(v))){
           this.hasTarget = false;
           addGoodValue(config.MAX_USABLE_DISTANCE);
-        } else if(distance < 250 && Math.abs(distance - d3Array.mean(this.rawVals.filter(v => v < 250).slice(0,3))) < 10) {
-          addGoodValue(Math.min(config.MAX_USABLE_DISTANCE, distance));
-        } else if(distance > 250) {
+        }
+        // we got a value beneath our threshold that is not too far out of bounds with the last 5 raw readings
+        else if(!rawValueIsAMiss(distance) && Math.abs(distance - d3Array.mean(this.rawVals.filter(v => v < upperThreshold).slice(0,5))) < 10) {
+          // we got a legit good value
+          addGoodValue(Math.min(distance));
+        }
+        else if(rawValueIsAMiss(distance)) {
+          // we got a miss, but just fill it in with most recent good value
           addGoodValue(this.vals[0]);
         }
       } else {
+        let recentRawVals = this.rawVals.slice(0,4);
         // if the last four are all legit, then something is there
         // TODO, make the # of legit values higher for further distances
-        if( !this.rawVals.slice(0,5).find(v => v > 250) ) {
+        if( !recentRawVals.find(v => rawValueIsAMiss(v)) ) {
           // there's something there
-          addGoodValue(distance);
+          recentRawVals.reverse().forEach((v,i) => {
+            addGoodValue(distance, i < recentRawVals.length-1);
+          });
           this.hasTarget = true;
         }
       }
@@ -146,8 +164,6 @@ class DistanceSensor extends EventEmitter {
 
   getMovementFactor(vals){
     // remove obvious outliers, if it is far outside the mean, then throw it out
-    const mean = d3Array.mean(vals);
-    vals = vals.filter(v => Math.abs(v - mean) < vals.length * 5);
     if(!vals.length) return 0;
     return utils.MAD(vals);
     // return Math.log(d3Array.variance(vals) + 1);
@@ -189,7 +205,7 @@ class DistanceSensor extends EventEmitter {
         this.on_exit();
       } else if(this.isMoving && this.movementShort < 1){
         this.on_stillness();
-      } else if(this.movementShort >= 1.5){
+      } else if(this.movementShort >= 1){
         this.on_movement(this.movementShort);
       }
     }

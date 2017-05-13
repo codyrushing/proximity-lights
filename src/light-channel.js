@@ -1,7 +1,7 @@
 'use strict';
 const request = require('request');
 const config = require('./config');
-const { throttle } = require('lodash');
+const { throttle, pick } = require('lodash');
 const { bridgeHost, bridgeUser} = config;
 const API_ROOT = `http://${bridgeHost}/api/${bridgeUser}`;
 
@@ -13,9 +13,12 @@ const lightChannel = {
         method: 'PUT',
         url: `${API_ROOT}/lights/${lightId}/state`,
         json: true,
-        body: Object.assign({
-          transitiontime: 0
-        }, data)
+        body: Object.assign(
+          {
+            transitiontime: 0
+          },
+          pick(data, 'on', 'hue', 'sat', 'bri', 'ct', 'transitiontime')
+        )
       }, (err, response, body) => {
         if(err){
           console.error(err);
@@ -28,6 +31,7 @@ const lightChannel = {
     }
   ),
   update: function(lightId, data){
+    if(!data) return;
     if(data.unblock){
       this.blocked[lightId] = false;
     }
@@ -40,7 +44,7 @@ const lightChannel = {
           () => {
             this.blocked[lightId] = false;
           },
-          blockForTime
+          data.blockForTime
         );
       }
     }

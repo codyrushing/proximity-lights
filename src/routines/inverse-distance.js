@@ -3,7 +3,6 @@ const d3Scale = require('d3-scale');
 const lightChannel = require('../light-channel');
 const BaseRoutine = require('./base');
 const config = require('../constants');
-
 const briScale = d3Scale.scaleLinear()
   .clamp(true)
   .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
@@ -40,15 +39,18 @@ class InverseDistance extends BaseRoutine {
     });
     this.i = this.i === 4 ? 0 : this.i+1;
   }
+  goRed(){
+    return {
+      hue: 0,
+      bri: 1,
+      sat: 255,
+      transitiontime: 1
+    }
+  }
   processSensorData(data){
     // map sensor state to light properties
     if(data.isEmpty){
-      return {
-        hue: 0,
-        bri: 1,
-        sat: 255,
-        transitiontime: 1
-      }
+      return this.goRed();
     }
     return {
       bri: data.isEmpty ? 1 : Math.round( briScale(data.distance) ),
@@ -61,6 +63,9 @@ class InverseDistance extends BaseRoutine {
   }
   on_stillness(){
 
+  }
+  on_exit(){
+    lightChannel.update(this.lightId, this.goRed());
   }
   on_sensorState(nextSensorData){
     if(
