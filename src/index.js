@@ -1,23 +1,38 @@
 const http = require('http');
 const path = require('path');
 const DistanceSensor = require('./distance-sensor');
-const InverseProximityRoutine = require('./routines/inverse-distance');
+const GroupRoutine = require('./routines/group');
 const config = require('./config');
 const routines = {};
+
+var groupRoutine = null;
 
 // initialize sensors and set up a recipe
 const distanceSensors = config.sensors.map(
   sensorData => new DistanceSensor(sensorData)
 );
 
-const applyRoutine = (routineName) => {
-  try {
-    const Routine = require(`./routines/${routineName}`);
-    distanceSensors.forEach(sensor => {
-      let routine = routines[sensor.lightId];
+const stopRoutines = () => {
+  if(groupRoutine){
+    groupRoutine.destroy();
+    groupRoutine = null;
+  }
+  Object.keys(routines).forEach(
+    id => {
+      const routine = routines[id];
       if(routine){
         routine.destroy();
       }
+    }
+  );
+}
+
+const applyRoutine = routineName => {
+  try {
+    const Routine = require(`./routines/${routineName}`);
+    stopRoutines();
+    distanceSensors.forEach(sensor => {
+      let routine = routines[sensor.lightId];
       routines[sensor.lightId] = new Routine(sensor, sensor.lightId);
     });
   } catch(err) {
@@ -25,15 +40,26 @@ const applyRoutine = (routineName) => {
   }
 }
 
-applyRoutine('flicker-move');
+const applyGroupRoutine = () => {
+  try {
+    stopRoutines();
+    groupRoutine = new GroupRoutine(
+      distanceSensors.map(s => s.lightId)
+    );
+  } catch(err) {
+    console.error('Error applying group routine', err.stack);
+  }
+}
+
+applyRoutine('inverse-distance');
+// applyGroupRoutine();
 
 const server = http.createServer(
   (req, res) => {
-    console.log(req.url);
     try {
       if(req.url.match(/^\/set-routine/)){
         let routineName = path.basename(req.url);
-        applyRoutine(routineName);
+        routineName === 'group' ? applyGroupRoutine() : applyRoutine(routineName);
       }
       res.end('OK');
     } catch(err) {

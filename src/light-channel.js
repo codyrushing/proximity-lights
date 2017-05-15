@@ -5,13 +5,19 @@ const { throttle, pick } = require('lodash');
 const { bridgeHost, bridgeUser} = config;
 const API_ROOT = `http://${bridgeHost}/api/${bridgeUser}`;
 
+const debug = false;
+
 const lightChannel = {
   blocked: {},
   APICall: throttle(
-    function(lightId, data){
+    function(endpoint, data){
+      if(debug){
+        console.log(endpoint);
+        console.log(data);
+      }
       request({
         method: 'PUT',
-        url: `${API_ROOT}/lights/${lightId}/state`,
+        url: `${API_ROOT}${endpoint}`,
         json: true,
         body: Object.assign(
           {
@@ -25,7 +31,7 @@ const lightChannel = {
         }
       });
     },
-    100,
+    0,
     {
       leading: true
     }
@@ -36,7 +42,10 @@ const lightChannel = {
       this.blocked[lightId] = false;
     }
     if(!this.blocked[lightId]){
-      this.APICall(lightId, data);
+      this.APICall(
+        `/lights/${lightId}/state`,
+        data
+      );
       this.blocked[lightId] = !!data.block;
       if(data.blockForTime){
         this.blocked[lightId] = true;
@@ -48,6 +57,12 @@ const lightChannel = {
         );
       }
     }
+  },
+  updateGroup(data){
+    return this.APICall(
+      `/groups/0/action`,
+      data
+    );
   }
 }
 

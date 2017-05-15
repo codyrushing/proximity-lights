@@ -51,10 +51,10 @@ class FlickerMove extends BaseRoutine {
       this.offTimeout = setTimeout(
         () => {
           this.on = false;
-          this.updateLight({
-            on: false,
-            unblock: true
-          });
+          // this.updateLight({
+          //   on: false,
+          //   unblock: true
+          // });
           if(typeof cb === 'function'){
             this.cbTimeout = setTimeout(
               cb.bind(this),
@@ -110,15 +110,15 @@ class FlickerMove extends BaseRoutine {
     );
   }
   on_enter(){
-    this.clearAllTimers();
+    // this.clearAllTimers();
   }
   on_exit(){
-    this.clearAllTimers();
-    this.on = false;
-    lightChannel.update(this.lightId, {
-      on: false,
-      unblock: true
-    });
+    // this.clearAllTimers();
+    // this.on = false;
+    // lightChannel.update(this.lightId, {
+    //   on: false,
+    //   unblock: true
+    // });
   }
   on_sensorState(nextSensorData){
     if(

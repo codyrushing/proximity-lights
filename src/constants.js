@@ -1,6 +1,6 @@
 module.exports = {
   MIN_USABLE_DISTANCE: 6,
-  MAX_USABLE_DISTANCE: 150,
+  MAX_USABLE_DISTANCE: 120,
   hues: [
     0,
     12750,
