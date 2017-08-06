@@ -31,9 +31,9 @@ const lightChannel = {
         }
       });
     },
-    0,
+    50,
     {
-      leading: true
+      leading: false
     }
   ),
   update: function(lightId, data){

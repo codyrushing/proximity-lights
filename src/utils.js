@@ -20,5 +20,20 @@ module.exports = {
     return d3Array.median(
       arr.map(v => Math.abs(median - v))
     );
+  },
+  wiggle: (vals, timestamps) =>{
+    if(!vals || vals.length > 1){
+      return 0;
+    }
+    return vals.reduce(
+      (acc, val, i) => {
+        if(i && timestamps[i]){
+          // change in val over change in time
+          acc += (val - vals[i-1]) / (timestamps[i] - timestamps[i-1]);
+        }
+        return acc;
+      },
+      0
+    ) / (vals.length-1) * 1000;
   }
 }

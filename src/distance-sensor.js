@@ -14,7 +14,7 @@ https://developers.meethue.com/documentation/core-concepts
 const range = [6, 254];
 const upperThreshold = config.MAX_USABLE_DISTANCE;
 const sampleSize = 10;
-const rawValuesLength = 40;
+const numberOfStoredValues = 200;
 var exitThresholdScale = d3Scale.scaleLinear();
 exitThresholdScale.domain([6, config.MAX_USABLE_DISTANCE]);
 exitThresholdScale.range([4, 15]);
@@ -45,10 +45,13 @@ class DistanceSensor extends EventEmitter {
     this.serialPath = serialPath;
     this.setInitialState();
     this.vals = [];
-    this.vals.length = rawValuesLength;
+    this.vals.length = numberOfStoredValues;
     this.vals.fill(config.MAX_USABLE_DISTANCE);
+    this.timestamps = [];
+    this.timestamps.length = numberOfStoredValues;
+    this.timestamps.fill(Date.now());
     this.rawVals = [];
-    this.rawVals.length = rawValuesLength;
+    this.rawVals.length = numberOfStoredValues;
     this.rawVals.fill(upperThreshold);
     this.velocityVals = [];
     this.velocityVals.length = 10;
@@ -91,7 +94,8 @@ class DistanceSensor extends EventEmitter {
   on_data(data){
     const distance = parseInt(data, 10);
     var addGoodValue = (v, silent) => {
-      this.vals = [v].concat(this.vals).slice(0,200);
+      this.vals = [v].concat(this.vals).slice(0, numberOfStoredValues);
+      this.timestamps = [Date.now()].concat(this.timestamps).slice(0, numberOfStoredValues);
       if(!silent){
         this.update();
         process.nextTick(this.send.bind(this));
@@ -99,7 +103,7 @@ class DistanceSensor extends EventEmitter {
     }
     if(!isNaN(distance)){
       // save up to 100 values, which corresponds to 10 secs of data
-      this.rawVals = [distance].concat(this.rawVals).slice(0,rawValuesLength);
+      this.rawVals = [distance].concat(this.rawVals).slice(0,numberOfStoredValues);
       const exitThreshold = Math.round(exitThresholdScale(d3Array.mean(this.vals.slice(0,4))));
       if(this.hasTarget){
         // if the last X num of readings (based on distance) are misses, then we're empty
@@ -165,16 +169,15 @@ class DistanceSensor extends EventEmitter {
   getMovementFactor(vals){
     // remove obvious outliers, if it is far outside the mean, then throw it out
     if(!vals.length) return 0;
-    return utils.MAD(vals);
+    return utils.wiggle(vals, this.timestamps.slice(0, vals.length));
+    // return utils.MAD(vals);
     // return Math.log(d3Array.variance(vals) + 1);
   }
 
   update(){
     const now = Date.now();
     this.distance = this.vals[0];
-    if(this.lightId === 2){
-      console.log(this.distance);
-    }
+    // console.log(this.distance);
     // below than 10 is noise, 10 - 50 is the real movement range
     this.velocity = this.vals.slice(0, sampleSize*2).find(v => v === config.MAX_USABLE_DISTANCE) ?
       0 :

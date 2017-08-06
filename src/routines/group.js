@@ -1,9 +1,10 @@
 const _ = require('lodash');
 const lightChannel = require('../light-channel');
 
+// this could be extended
+
 class GroupRoutine {
   constructor(lightIds){
-    this.pendingTimeouts = {};
     this.lights = lightIds.map(
       id => {
         return {
@@ -18,13 +19,6 @@ class GroupRoutine {
   }
   init(){
     this.queued = [];
-    this.turnOffAll();
-    setTimeout(
-      () => {
-        this.lights.forEach(this.stairStepFade.bind(this));
-      },
-      50
-    );
   }
   turnOffAll(){
     this.lights.forEach(light => {
@@ -42,11 +36,15 @@ class GroupRoutine {
   updateLight(light, data){
     return new Promise(
       resolve => {
+        // set "on" property of light
         if(typeof data.on !== 'undefined'){
           light.on = data.on;
-        } else if(!light.on && data.on !== false){
+        }
+        // make sure "on" is set if we forgot
+        else if(!light.on && data.on !== false){
           data.on = true;
         }
+        // add the action to the queued list
         this.queued.push(
           {
             fn: () => {
@@ -55,111 +53,46 @@ class GroupRoutine {
                 _.clone(data)
               );
             },
+            data,
             resolve
           }
         );
+
+        // iterate over the queued actions
         const iterate = () => {
+
+          // execute the item on the top of the queue
           if(this.queued[0] && typeof this.queued[0].fn === 'function'){
             this.queued[0].fn();
-            this.queued[0].resolve()
-            this.queued[0].fn = null;
+
+            // look to transitiontime and try to resolve after it is done
             setTimeout(
               () => {
+                this.queued[0].resolve();
                 this.queued.shift();
-                // console.log(this.queued.length);
+                iterate();
               },
-              100
+              (this.queued[0].data.transitiontime || 0) * 100
             );
+            // set fn to null so it doesn't get re-run
+            this.queued[0].fn = null;
           }
+          // resolve if there are nothing else in queue
           else if(!this.queued.length) {
-            clearInterval(this.queueInterval);
-            this.queueInterval = null;
             resolve();
+          } else {
+            iterate();
           }
-        }
-        iterate();
-        if(!this.queueInterval){
-          this.queueInterval = setInterval(
-            iterate,
-            100
-          );
-        }
-      }
-    );
-  }
-  clearPendingActions(){
-    Object.keys(this.pendingTimeouts).forEach(
-      id => {
-        if(this.pendingTimeouts[id]){
-          clearTimeout(this.pendingTimeouts[id]);
-        }
-      }
-    );
-  }
-  fadeOut(light, pulseDuration=2000){
-    return new Promise(
-      resolve => {
-        const fadeOutDuration = Math.round( pulseDuration - 500 );
-        // if(!light.on){
-        //   return resolve();
-        // }
-        light.on = true;
-        this.updateLight(
-          light,
-          {
-            bri: 1,
-            transitiontime: Math.round(fadeOutDuration / 100)
-          }
-        );
-        this.offTimeout = setTimeout(
-          () => {
-            light.on = false;
-            this.updateLight(
-              light,
-              {
-                on: false,
-                unblock: true
-              }
-            )
-            .then(resolve);
-          },
-          fadeOutDuration
-        );
-      }
-    );
-  }
-  stairStepFade(light){
-    var i = 0;
-    const count = 5;
-    const turnBright = () => {
-      return this.updateLight(
-        light,
-        {
-          bri: Math.round((255/count)*(i+1))
-        }
-      );
-    };
-    const iterate = () => {
-      turnBright()
-        .then(
-          () => this.fadeOut(light, 1000 * (i/2+1))
-        )
-        .then(
-          () => i++
-        )
-        .then(
-          () => {
-            if(i < count){
-              return iterate();
-            }
-          }
-        );
-    }
-    iterate();
 
+        }
+
+        // start iterating
+        iterate();
+      }
+    );
   }
   destroy(){
-
+    this.queued = [];
   }
 }
 

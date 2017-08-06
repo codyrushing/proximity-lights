@@ -1,3 +1,10 @@
+/*
+Brightness increases with movement
+Red when close, blue when far
+On stillness, it heartbeats the current color
+TODO use smarter async controls, similar to GroupRoutine
+*/
+
 const { isEqual } = require('lodash');
 const d3Scale = require('d3-scale');
 const lightChannel = require('../light-channel');

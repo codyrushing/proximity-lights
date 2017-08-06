@@ -3,6 +3,9 @@ const d3Scale = require('d3-scale');
 const lightChannel = require('../light-channel');
 const BaseRoutine = require('./base');
 const config = require('../constants');
+
+// get brighter as you get further away, but turn red when you exit
+
 const briScale = d3Scale.scaleLinear()
   .clamp(true)
   .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])

@@ -1,3 +1,4 @@
+'use strict';
 const http = require('http');
 const path = require('path');
 const DistanceSensor = require('./distance-sensor');
@@ -51,15 +52,19 @@ const applyGroupRoutine = () => {
   }
 }
 
-applyRoutine('inverse-distance');
+applyRoutine('distance-brightness-red-exit');
 // applyGroupRoutine();
 
 const server = http.createServer(
   (req, res) => {
     try {
-      if(req.url.match(/^\/set-routine/)){
-        let routineName = path.basename(req.url);
-        routineName === 'group' ? applyGroupRoutine() : applyRoutine(routineName);
+      // eg. `/set-routine/flicker-move`
+      if(req.url.match(/^\/set-routine\//)){
+        applyRoutine(path.basename(req.url));
+      }
+      // eg. `/set-group-routine/stairstep-fade`
+      if(req.url.match(/^\/set-group-routine\//)){
+        applyGroupRoutine(path.basename(req.url));
       }
       res.end('OK');
     } catch(err) {

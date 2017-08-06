@@ -10,3 +10,7 @@
 * `ct` is color temperature, so warm and cold whites.  Only useful for whites - will override `hue` and `sat`.
 * `"effect": "colorloop"` cycles through all colors (send `"effect": "none"` to stop).  `"alert": "select"` blinks the last color.
 * You can address all lights with `/groups/0`
+
+### Deployment
+* On the TP-Link network, `bash deploy.sh 192.168.0.100`, and ssh into Pi via `ssh pi@192.168.0.100`.  That IP is reserved for the Pi on that network.
+* On home network, use the hostname `codys-pi3-modb`.
