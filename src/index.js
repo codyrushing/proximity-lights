@@ -1,9 +1,11 @@
 'use strict';
+const finalhandler = require('finalhandler')
 const http = require('http');
 const path = require('path');
 const DistanceSensor = require('./distance-sensor');
 const GroupRoutine = require('./routines/group');
 const config = require('./config');
+const serveStatic = require('serve-static');
 const routines = {};
 
 var groupRoutine = null;
@@ -55,18 +57,23 @@ const applyGroupRoutine = () => {
 applyRoutine('distance-brightness-red-exit');
 // applyGroupRoutine();
 
+const serve = serveStatic(path.join(__dirname, 'public'));
+
 const server = http.createServer(
   (req, res) => {
     try {
       // eg. `/set-routine/flicker-move`
       if(req.url.match(/^\/set-routine\//)){
         applyRoutine(path.basename(req.url));
+        res.end('OK');
       }
       // eg. `/set-group-routine/stairstep-fade`
       if(req.url.match(/^\/set-group-routine\//)){
         applyGroupRoutine(path.basename(req.url));
+        res.end('OK');
       }
-      res.end('OK');
+      // serve static
+      serve(req, res, finalhandler(req, res));
     } catch(err) {
       console.error(err);
       res.end('FAIL');

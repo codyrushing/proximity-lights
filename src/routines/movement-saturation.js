@@ -1,8 +1,13 @@
+/*
+
+*/
+
 const { isEqual } = require('lodash');
 const d3Scale = require('d3-scale');
 const lightChannel = require('../light-channel');
 const BaseRoutine = require('./base');
 const config = require('../constants');
+const blue = constants.hues[3];
 
 const briScale = d3Scale.scaleLinear()
   .clamp(true)
@@ -19,7 +24,7 @@ const satScale = d3Scale.scaleLinear()
 const hueScale = d3Scale.scaleLinear()
   .clamp(true)
   .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
-  .range([0, 46920]);
+  .range([0, blue]);
 
 class MovementSaturation extends BaseRoutine {
   init(){
