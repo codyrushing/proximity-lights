@@ -14,3 +14,4 @@
 ### Deployment
 * On the TP-Link network, `bash deploy.sh 192.168.0.100`, and ssh into Pi via `ssh pi@192.168.0.100`.  That IP is reserved for the Pi on that network.
 * On home network, use the hostname `codys-pi3-modb`.
+* The application starts when the Pi starts via systemd service.  If you want to stop the service while in development, run `sudo systemctl stop proximity-lights.service`.

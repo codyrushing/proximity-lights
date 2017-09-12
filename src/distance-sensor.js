@@ -11,13 +11,20 @@ Hue System API:
 https://developers.meethue.com/documentation/core-concepts
 */
 
-const range = [6, 254];
 const upperThreshold = config.MAX_USABLE_DISTANCE;
+const rangeLength = config.MAX_USABLE_DISTANCE - config.MIN_USABLE_DISTANCE;
 const sampleSize = 10;
 const numberOfStoredValues = 200;
+var maxMovement = 0;
 var exitThresholdScale = d3Scale.scaleLinear();
 exitThresholdScale.domain([6, config.MAX_USABLE_DISTANCE]);
 exitThresholdScale.range([4, 15]);
+
+const quantizeScale = d3Scale.scaleQuantize()
+  .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
+  .range(
+    d3Array.range(2, 24, 1)
+  );
 
 const SerialPort = require('serialport');
 const rawValueIsAMiss = function(rawVal){
@@ -74,8 +81,15 @@ class DistanceSensor extends EventEmitter {
       })
       .on('error', err => {
         console.error(`Could not open serial port: ${err.message}`);
-      })
-      .on('data', data => this.on_data(data));
+      });
+
+    setTimeout(
+      () => {
+        this.port
+          .on('data', data => this.on_data(data));
+      },
+      1000
+    );
   }
 
   setInitialState(){
@@ -114,15 +128,19 @@ class DistanceSensor extends EventEmitter {
         // we got a value beneath our threshold that is not too far out of bounds with the last 5 raw readings
         else if(!rawValueIsAMiss(distance) && Math.abs(distance - d3Array.mean(this.rawVals.filter(v => v < upperThreshold).slice(0,5))) < 10) {
           // we got a legit good value
-          addGoodValue(Math.min(distance));
+          addGoodValue(distance);
         }
         else if(rawValueIsAMiss(distance)) {
           // we got a miss, but just fill it in with most recent good value
           addGoodValue(this.vals[0]);
         }
       } else {
-        let recentRawVals = this.rawVals.slice(0,4);
-        // if the last four are all legit, then something is there
+        const avgDistance = d3Array.mean(this.rawVals.slice(0, 2));
+        let recentRawVals = this.rawVals.slice(
+          0,
+          quantizeScale(avgDistance)
+        );
+        // if the last five are all legit, then something is there
         // TODO, make the # of legit values higher for further distances
         if( !recentRawVals.find(v => rawValueIsAMiss(v)) ) {
           // there's something there
@@ -167,9 +185,20 @@ class DistanceSensor extends EventEmitter {
   }
 
   getMovementFactor(vals){
-    // remove obvious outliers, if it is far outside the mean, then throw it out
-    if(!vals.length) return 0;
-    return utils.wiggle(vals, this.timestamps.slice(0, vals.length));
+    const mean = d3Array.mean(vals);
+    const smoothing = (mean - config.MIN_USABLE_DISTANCE) * 0.8 / rangeLength;
+    var timestamps = [];
+    vals = vals.filter(
+      (v, i) => {
+        if(v < config.MAX_USABLE_DISTANCE){
+          timestamps.push(this.timestamps[i]);
+          return true;
+        }
+        return false;
+      }
+    );
+    return utils.wiggle(vals, timestamps, smoothing);
+    // return utils.IQR(vals);
     // return utils.MAD(vals);
     // return Math.log(d3Array.variance(vals) + 1);
   }
@@ -189,9 +218,9 @@ class DistanceSensor extends EventEmitter {
     this.velocity = isNaN(this.velocity) ? 0 : this.velocity;
     // this.velocityVals = [isNaN(velocity) ? 0 : velocity].concat(this.velocityVals).slice(0,10);
     // calculate movementFactor from variance
-    this.movementShort = this.getMovementFactor(this.vals.slice(0,Math.round(sampleSize/2)));
+    // this.movementShort = this.getMovementFactor(this.vals.slice(0,Math.round(sampleSize/2)));
     this.movementLong = this.getMovementFactor(this.vals.slice(0,sampleSize*2));
-
+    console.log(this.movementLong);
     /*
     if empty
       listen for enter event

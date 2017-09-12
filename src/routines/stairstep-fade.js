@@ -11,38 +11,6 @@ class StairStepFadeRoutine extends GroupRoutine {
       50
     );
   }
-  fadeOut(light, pulseDuration=2000){
-    return new Promise(
-      resolve => {
-        const fadeOutDuration = Math.round( pulseDuration - 500 );
-        light.on = true;
-        // Hue API won't let you set brighness to 0, so set it to 1
-        this.updateLight(
-          light,
-          {
-            bri: 1,
-            // convert ms to Hue time
-            transitiontime: Math.round(fadeOutDuration / 100)
-          }
-        );
-        // then, when it's and its transition is done
-        this.offTimeout = setTimeout(
-          () => {
-            light.on = false;
-            this.updateLight(
-              light,
-              {
-                on: false,
-                unblock: true
-              }
-            )
-            .then(resolve);
-          },
-          fadeOutDuration
-        );
-      }
-    );
-  }
   stairStepFade(light){
     var i = 0;
     const count = 5;
@@ -57,7 +25,7 @@ class StairStepFadeRoutine extends GroupRoutine {
     const iterate = () => {
       turnBright()
         .then(
-          () => this.fadeOut(light, 1000 * (i/2+1))
+          () => this.fadeOut(light, 1000 * (i/2+1) - 500)
         )
         .then(
           () => i++
@@ -69,7 +37,7 @@ class StairStepFadeRoutine extends GroupRoutine {
             }
           }
         );
-    }
+    };
     iterate();
   }
 

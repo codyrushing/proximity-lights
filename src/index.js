@@ -51,10 +51,11 @@ const applyGroupRoutine = () => {
     );
   } catch(err) {
     console.error('Error applying group routine', err.stack);
+    console.error(err.stack);
   }
 }
 
-applyRoutine('distance-brightness-red-exit');
+applyRoutine('strobe-distance');
 // applyGroupRoutine();
 
 const serve = serveStatic(path.join(__dirname, 'public'));

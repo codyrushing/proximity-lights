@@ -9,16 +9,11 @@ class GroupRoutine {
       id => {
         return {
           id,
-          on: false,
-          offTimeout: null,
-          cbTimeout: null
+          on: false
         }
       }
     );
     this.init();
-  }
-  init(){
-    this.queued = [];
   }
   turnOffAll(){
     this.lights.forEach(light => {

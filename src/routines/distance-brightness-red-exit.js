@@ -28,9 +28,17 @@ const ctScale = d3Scale.scaleLinear()
   // ctScale.range([153, 500]);
   .range([250, 400]);
 
+const redState = {
+  hue: 0,
+  bri: 1,
+  sat: 255,
+  transitiontime: 1
+};
+
 class InverseDistance extends BaseRoutine {
   init(){
     super.init();
+    this.goRed();
     this.i = 0;
     this.colorPoints = [0, 5000, 40000, 50000];
   }
@@ -43,17 +51,12 @@ class InverseDistance extends BaseRoutine {
     this.i = this.i === 4 ? 0 : this.i+1;
   }
   goRed(){
-    return {
-      hue: 0,
-      bri: 1,
-      sat: 255,
-      transitiontime: 1
-    }
+    return lightChannel.update(this.lightId, redState);
   }
   processSensorData(data){
     // map sensor state to light properties
     if(data.isEmpty){
-      return this.goRed();
+      return redState;
     }
     return {
       bri: data.isEmpty ? 1 : Math.round( briScale(data.distance) ),
@@ -68,7 +71,7 @@ class InverseDistance extends BaseRoutine {
 
   }
   on_exit(){
-    lightChannel.update(this.lightId, this.goRed());
+    this.goRed();
   }
   on_sensorState(nextSensorData){
     if(
