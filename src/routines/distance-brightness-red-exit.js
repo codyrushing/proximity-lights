@@ -55,7 +55,7 @@ class InverseDistance extends BaseRoutine {
   }
   processSensorData(data){
     // map sensor state to light properties
-    if(data.isEmpty){
+    if(!data || data.isEmpty){
       return redState;
     }
     return {

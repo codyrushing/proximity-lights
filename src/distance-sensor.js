@@ -220,7 +220,6 @@ class DistanceSensor extends EventEmitter {
     // calculate movementFactor from variance
     // this.movementShort = this.getMovementFactor(this.vals.slice(0,Math.round(sampleSize/2)));
     this.movementLong = this.getMovementFactor(this.vals.slice(0,sampleSize*2));
-    console.log(this.movementLong);
     /*
     if empty
       listen for enter event

@@ -19,6 +19,7 @@ class ColorCycleMovementBrightness extends BaseRoutine {
   }
   processSensorData(data){
     // map sensor state to light properties
+    if(!data) return;
     const bri = Math.round(briScale(data.movementLong));
     return {
       bri: isNaN(bri) ? 1 : bri,

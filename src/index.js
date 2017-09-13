@@ -55,7 +55,7 @@ const applyGroupRoutine = () => {
   }
 }
 
-applyRoutine('strobe-distance');
+applyRoutine('distance-brightness-red-exit');
 // applyGroupRoutine();
 
 const serve = serveStatic(path.join(__dirname, 'public'));

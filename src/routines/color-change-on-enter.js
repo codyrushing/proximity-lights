@@ -15,7 +15,7 @@ class ColorChangeOnEnter extends BaseRoutine {
   }
   processSensorData(data){
     // map sensor state to light properties
-    if(data.isEmpty){
+    if(!data || data.isEmpty){
       return;
     }
     const bri = Math.round(briScale(data.movementLong));
