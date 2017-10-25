@@ -7,7 +7,7 @@ const d3Scale = require('d3-scale');
 const lightChannel = require('../light-channel');
 const BaseRoutine = require('./base');
 const config = require('../constants');
-const blue = constants.hues[3];
+const blue = config.hues[3];
 
 const briScale = d3Scale.scaleLinear()
   .clamp(true)
@@ -37,7 +37,6 @@ class MovementSaturation extends BaseRoutine {
   }
   processSensorData(data){
     // map sensor state to light properties
-    console.log(data.movementLong);
     return {
       bri: Math.round(briScale(data.movementLong)),
       sat: Math.round(satScale(data.movementLong)),
@@ -49,17 +48,17 @@ class MovementSaturation extends BaseRoutine {
 
   }
   on_enter(){
-    lightChannel.update(this.lightId, {
-      on: true,
-      ct: 350,
-      bri: 1,
-      transitiontime: 1
-    });
+    // lightChannel.update(this.lightId, {
+    //   on: true,
+    //   ct: 350,
+    //   bri: 1,
+    //   transitiontime: 1
+    // });
   }
   on_exit(){
-    lightChannel.update(this.lightId, {
-      on: false
-    });
+    // lightChannel.update(this.lightId, {
+    //   on: false
+    // });
   }
   on_sensorState(nextSensorData){
     if(

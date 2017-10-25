@@ -32,6 +32,7 @@ const stopRoutines = () => {
 
 const applyRoutine = routineName => {
   try {
+    console.log(`attempting to apply routine ${routineName}`);
     const Routine = require(`./routines/${routineName}`);
     stopRoutines();
     distanceSensors.forEach(sensor => {
@@ -39,7 +40,7 @@ const applyRoutine = routineName => {
       routines[sensor.lightId] = new Routine(sensor, sensor.lightId);
     });
   } catch(err) {
-    console.error(`Error applying routine ${routineName}`, err.message);
+    console.error(`Error applying routine ${routineName}`, err.stack);
   }
 }
 
@@ -55,7 +56,7 @@ const applyGroupRoutine = () => {
   }
 }
 
-applyRoutine('distance-brightness-red-exit');
+applyRoutine('flicker-move-alt');
 // applyGroupRoutine();
 
 const serve = serveStatic(path.join(__dirname, 'public'));

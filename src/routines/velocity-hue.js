@@ -49,7 +49,6 @@ class VelocityHue extends BaseRoutine {
 
   }
   on_enter(){
-    console.log('enter');
     lightChannel.update(this.lightId, {
       on: true,
       ct: 350,

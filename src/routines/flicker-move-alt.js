@@ -1,8 +1,9 @@
 /*
-Brightness increases with movement
-Red when close, blue when far
-On empty, it heartbeats the current color
-TODO use smarter async controls, similar to GroupRoutine
+blue and red is still good
+constant saturation is good
+thoughts: brightness based on movement is a little bouncy, maybe use movementLong
+maybe change effect on stillness
+i think exit effects are always a good idea
 */
 
 const { isEqual } = require('lodash');
@@ -22,17 +23,18 @@ const satScale = d3Scale.scaleLinear()
 
 const briScale = d3Scale.scaleLinear()
   .clamp(true)
-  .domain([0, 35])
+  .domain([0, 25])
   .range([15, 255-baselineBrightness]);
 
 const hueScale = d3Scale.scaleLinear()
   .clamp(true)
-  .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE/2])
+  .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
   .range([red, blue]);
 
-class FlickerMove extends BaseRoutine {
+class FlickerMoveAlt extends BaseRoutine {
   init(){
     super.init();
+    // start in empty mode
     this.on_exit(true);
   }
   updateLight(params){
@@ -46,7 +48,7 @@ class FlickerMove extends BaseRoutine {
     // map sensor state to light properties
     if(!data.isEmpty){
       return {
-        bri: baselineBrightness + briScale(data.movementShort),
+        bri: baselineBrightness + briScale(data.movementLong),
         hue: Math.round(hueScale(data.distance)),
         sat: 180,
         transitiontime: 1
@@ -107,4 +109,4 @@ class FlickerMove extends BaseRoutine {
   }
 }
 
-module.exports = FlickerMove;
+module.exports = FlickerMoveAlt;
