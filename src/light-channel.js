@@ -6,43 +6,49 @@ const { bridgeHost, bridgeUser} = config;
 const API_ROOT = `http://${bridgeHost}/api/${bridgeUser}`;
 
 const debug = false;
-
 const lightChannel = {
   blocked: {},
-  APICall: throttle(
-    function(endpoint, data){
-      if(debug){
-        console.log(endpoint);
-        console.log(data);
+  lightHandlers: {},
+  getThrottledHandler: function(lightId) {
+    lightId = lightId.toString();
+    if(this.lightHandlers[lightId]){ return this.lightHandlers[lightId]; }
+    this.lightHandlers[lightId] = throttle(
+      this.APICall,
+      40,
+      {
+        leading: false
       }
-      request({
-        method: 'PUT',
-        url: `${API_ROOT}${endpoint}`,
-        json: true,
-        body: Object.assign(
-          {
-            transitiontime: 0
-          },
-          pick(data, 'on', 'hue', 'sat', 'bri', 'ct', 'transitiontime')
-        )
-      }, (err, response, body) => {
-        if(err){
-          console.error(err);
-        }
-      });
-    },
-    50,
-    {
-      leading: false
+    );
+    return this.lightHandlers[lightId];
+  },
+  APICall: function(endpoint, data) {
+    if(debug){
+      console.log(endpoint);
+      console.log(data);
     }
-  ),
+    request({
+      method: 'PUT',
+      url: `${API_ROOT}${endpoint}`,
+      json: true,
+      body: Object.assign(
+        {
+          transitiontime: 0
+        },
+        pick(data, 'on', 'hue', 'sat', 'bri', 'ct', 'transitiontime')
+      )
+    }, (err, response, body) => {
+      if(err){
+        console.error(err);
+      }
+    });
+  },
   update: function(lightId, data){
     if(!data) return;
     if(data.unblock){
       this.blocked[lightId] = false;
     }
     if(!this.blocked[lightId]){
-      this.APICall(
+      this.getThrottledHandler(lightId)(
         `/lights/${lightId}/state`,
         data
       );
