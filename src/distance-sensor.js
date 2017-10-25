@@ -63,6 +63,7 @@ class DistanceSensor extends EventEmitter {
     this.velocityVals = [];
     this.velocityVals.length = 10;
     this.velocityVals.fill(0);
+    this.on_exit();
     process.nextTick(
       () => {
         this.update();
@@ -218,7 +219,7 @@ class DistanceSensor extends EventEmitter {
     this.velocity = isNaN(this.velocity) ? 0 : this.velocity;
     // this.velocityVals = [isNaN(velocity) ? 0 : velocity].concat(this.velocityVals).slice(0,10);
     // calculate movementFactor from variance
-    // this.movementShort = this.getMovementFactor(this.vals.slice(0,Math.round(sampleSize/2)));
+    this.movementShort = this.getMovementFactor(this.vals.slice(0,Math.round(sampleSize/2)));
     this.movementLong = this.getMovementFactor(this.vals.slice(0,sampleSize*2));
     /*
     if empty
@@ -237,9 +238,9 @@ class DistanceSensor extends EventEmitter {
     } else {
       if(this.distance === config.MAX_USABLE_DISTANCE){
         this.on_exit();
-      } else if(this.isMoving && this.movementShort < 1){
+      } else if(this.isMoving && this.movementShort < 10){
         this.on_stillness();
-      } else if(this.movementShort >= 1){
+      } else if(this.movementShort >= 10){
         this.on_movement(this.movementShort);
       }
     }
