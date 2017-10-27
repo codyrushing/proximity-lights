@@ -14,7 +14,7 @@ const lightChannel = {
     if(this.lightHandlers[lightId]){ return this.lightHandlers[lightId]; }
     this.lightHandlers[lightId] = throttle(
       this.APICall,
-      40,
+      50,
       {
         leading: false
       }

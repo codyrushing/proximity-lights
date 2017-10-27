@@ -23,7 +23,7 @@ exitThresholdScale.range([4, 15]);
 const quantizeScale = d3Scale.scaleQuantize()
   .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
   .range(
-    d3Array.range(2, 24, 1)
+    d3Array.range(2, 20, 1)
   );
 
 const SerialPort = require('serialport');
@@ -137,12 +137,14 @@ class DistanceSensor extends EventEmitter {
         }
       } else {
         const avgDistance = d3Array.mean(this.rawVals.slice(0, 2));
+        // the # of raw values we check for legitimacy is based on the avg,
+        // further distances require us to look through more values
+        // because the sensor is less reliable at greater distances
         let recentRawVals = this.rawVals.slice(
           0,
           quantizeScale(avgDistance)
         );
-        // if the last five are all legit, then something is there
-        // TODO, make the # of legit values higher for further distances
+        // if the last n # of raw values are all legit, then something is there
         if( !recentRawVals.find(v => rawValueIsAMiss(v)) ) {
           // there's something there
           recentRawVals.reverse().forEach((v,i) => {
@@ -220,7 +222,7 @@ class DistanceSensor extends EventEmitter {
     // this.velocityVals = [isNaN(velocity) ? 0 : velocity].concat(this.velocityVals).slice(0,10);
     // calculate movementFactor from variance
     this.movementShort = this.getMovementFactor(this.vals.slice(0,Math.round(sampleSize/2)));
-    this.movementLong = this.getMovementFactor(this.vals.slice(0,sampleSize*2));
+    this.movementLong = this.getMovementFactor(this.vals.slice(0,sampleSize));
     /*
     if empty
       listen for enter event
