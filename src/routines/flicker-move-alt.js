@@ -34,6 +34,12 @@ const hueScale = d3Scale.scaleLinear()
 class FlickerMoveAlt extends BaseRoutine {
   init(){
     super.init();
+    this.updateLight({
+      bri: 1,
+      hue: blue,
+      sat: 180,
+      transitiontime: 5
+    });
     // start in empty mode
     this.on_exit(true);
   }

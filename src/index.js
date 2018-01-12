@@ -56,7 +56,7 @@ const applyGroupRoutine = () => {
   }
 }
 
-applyRoutine('flicker-move-alt');
+applyRoutine('distance-brightness');
 // applyGroupRoutine();
 
 const serve = serveStatic(path.join(__dirname, 'public'));
