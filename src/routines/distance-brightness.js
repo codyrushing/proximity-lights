@@ -15,7 +15,7 @@ const emptyLightState = {
 const briScale = d3Scale.scaleLinear()
   .clamp(true)
   .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
-  .range([255, 1]);
+  .range([255, 10]);
 
 class InverseDistance extends BaseRoutine {
   init(){

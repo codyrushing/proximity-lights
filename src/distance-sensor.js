@@ -23,7 +23,7 @@ exitThresholdScale.range([4, 15]);
 const quantizeScale = d3Scale.scaleQuantize()
   .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
   .range(
-    d3Array.range(2, 20, 1)
+    d3Array.range(2, 16, 1)
   );
 
 const SerialPort = require('serialport');
@@ -209,7 +209,9 @@ class DistanceSensor extends EventEmitter {
   update(){
     const now = Date.now();
     this.distance = this.vals[0];
-    // console.log(this.distance);
+    // if(this.lightId === 2){
+    //   console.log(this.distance);
+    // }
     // below than 10 is noise, 10 - 50 is the real movement range
     this.velocity = this.vals.slice(0, sampleSize*2).find(v => v === config.MAX_USABLE_DISTANCE) ?
       0 :
