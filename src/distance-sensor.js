@@ -21,9 +21,9 @@ exitThresholdScale.domain([6, config.MAX_USABLE_DISTANCE]);
 exitThresholdScale.range([4, 15]);
 
 const quantizeScale = d3Scale.scaleQuantize()
-  .domain([config.MIN_USABLE_DISTANCE, config.MAX_USABLE_DISTANCE])
+  .domain([config.MIN_USABLE_DISTANCE * 4, config.MAX_USABLE_DISTANCE])
   .range(
-    d3Array.range(2, 16, 1)
+    d3Array.range(1, 16, 1)
   );
 
 const SerialPort = require('serialport');
