@@ -1,6 +1,6 @@
 module.exports = {
   MIN_USABLE_DISTANCE: 6,
-  MAX_USABLE_DISTANCE: 120,
+  MAX_USABLE_DISTANCE: 96,
   temperatures: [
     153,
     500
