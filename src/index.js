@@ -56,7 +56,7 @@ const applyGroupRoutine = () => {
   }
 }
 
-applyRoutine('distance-brightness');
+applyRoutine('blue-brightness-white-exit');
 // applyGroupRoutine();
 
 const serve = serveStatic(path.join(__dirname, 'public'));
